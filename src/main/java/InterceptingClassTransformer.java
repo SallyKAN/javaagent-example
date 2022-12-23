@@ -1,5 +1,6 @@
 import javassist.ClassPool;
 import javassist.CtClass;
+import javassist.CtField;
 import javassist.CtMethod;
 import javassist.runtime.Desc;
 import javassist.scopedpool.ScopedClassPoolFactoryImpl;
@@ -52,18 +53,23 @@ public class InterceptingClassTransformer implements ClassFileTransformer {
             throws IllegalClassFormatException {
 
         byte[] byteCode = classfileBuffer;
+        className = className.replace("/", ".");
+        String target = "java.io.DeleteOnExitHook";
+//        log.info("check the class " + className);
         // If you wanted to intercept all the classs then you can remove this conditional check.
-        if (className.equals("Example")) {
+        if (className.contains(target)) {
             log.info("Transforming the class " + className);
             try {
                 ClassPool classPool = scopedClassPoolFactory.create(loader, rootPool,
                         ScopedClassPoolRepositoryImpl.getInstance());
                 CtClass ctClass = classPool.makeClass(new ByteArrayInputStream(classfileBuffer));
                 CtMethod[] methods = ctClass.getDeclaredMethods();
-
+//                CtField ctField = ctClass.getDeclaredField("files");
                 for (CtMethod method : methods) {
-                    if (method.getName().equals("main")){
-                        method.insertAfter("System.out.println(\"Logging using Agent\");");
+                    log.info("check the methods " + method);
+                    if (method.getName().equals("runHooks")){
+                        method.insertBefore("return;");
+                        method.insertBefore("System.out.println(\"Logging using Agent\");");
                     }
                 }
                 byteCode = ctClass.toBytecode();
